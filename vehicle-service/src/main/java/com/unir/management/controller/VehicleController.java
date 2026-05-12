@@ -39,10 +39,6 @@ public class VehicleController {
         return ResponseEntity.ok(vehicleService.searchVehicles(brand, model));
     }
 
-    @GetMapping("/available")
-    public ResponseEntity<List<Vehicle>> getAvailableVehicles() {
-        return ResponseEntity.ok(vehicleService.getAvailableVehicles());
-    }
 
     @GetMapping("/{id}")
     public ResponseEntity<Vehicle> getVehicleById(@PathVariable Long id) {

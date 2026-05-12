@@ -1,0 +1,8 @@
+com\unir\management\persistence\repository\VehicleRepository.class
+com\unir\management\shared\exception\RestExceptionHandler.class
+com\unir\management\persistence\model\Vehicle.class
+com\unir\management\service\VehicleService.class
+com\unir\management\controller\VehicleController.class
+com\unir\management\dto\RentalResponse.class
+com\unir\management\shared\exception\ResourceNotFoundException.class
+com\unir\management\ManagementVehicleApplication.class
