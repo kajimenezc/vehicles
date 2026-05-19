@@ -19,7 +19,7 @@ Este proyecto configura microservicios Spring Boot con Eureka para service disco
 
 1. Construir y ejecutar todos los servicios:
    ```bash
-   docker-compose up --build
+   |
    ```
 
 2. Acceder a:
