@@ -12,11 +12,13 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.unir.management.persistence.model.Vehicle;
 import com.unir.management.service.VehicleService;
 
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/vehicles")
 public class VehicleController {

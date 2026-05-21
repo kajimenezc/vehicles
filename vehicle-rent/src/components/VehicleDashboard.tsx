@@ -1,16 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Vehicle } from '../types'
-import { getVehicleById, getVehicles, registerRental, updateVehicleState } from '../services/api'
+import { getVehicles, updateVehicle } from '../services/api'
 
-type Props = {
-  onNavigate: (page: 'create' | 'edit') => void
+function formatDate(value: string | null | undefined): string {
+  if (!value) return '—'
+  const d = new Date(value)
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const year = d.getFullYear()
+  let hours = d.getHours()
+  const minutes = String(d.getMinutes()).padStart(2, '0')
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  hours = hours % 12 || 12
+  return `${day}/${month}/${year} ${hours}:${minutes} ${ampm}`
 }
 
-export default function VehicleDashboard({ onNavigate }: Props) {
+export default function VehicleDashboard() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [message, setMessage] = useState<string>('')
   const [loading, setLoading] = useState(false)
+  const [rentingVehicle, setRentingVehicle] = useState<Vehicle | null>(null)
+  const [returnDate, setReturnDate] = useState('')
 
   const availableCount = useMemo(
     () => vehicles.filter((vehicle) => vehicle.state === 'disponible').length,
@@ -35,91 +45,123 @@ export default function VehicleDashboard({ onNavigate }: Props) {
     }
   }
 
-  async function handleViewDetails(id: number) {
-    setLoading(true)
-    setMessage('Cargando detalles...')
-    try {
-      const vehicle = await getVehicleById(id)
-      setSelectedVehicle(vehicle)
-      setMessage('Detalle cargado correctamente.')
-    } catch (error) {
-      setMessage(`No se pudo obtener el vehículo: ${(error as Error).message}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleRent(vehicle: Vehicle) {
+  function handleShowRentForm(vehicle: Vehicle) {
     if (vehicle.state !== 'disponible') {
-      setMessage('El vehículo ya no está disponible para alquiler.')
+      setMessage('El vehículo ya no está disponible.')
       return
     }
+    setRentingVehicle(vehicle)
+    setReturnDate('')
+    setMessage('')
+  }
+
+  const dateOptions = useMemo(() => {
+    const options: { label: string; value: string }[] = []
+    const today = new Date()
+    for (let i = 1; i <= 50; i++) {
+      const d = new Date(today)
+      d.setDate(d.getDate() + i)
+      const day = String(d.getDate()).padStart(2, '0')
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const year = d.getFullYear()
+      options.push({
+        label: `${day}/${month}/${year}`,
+        value: d.toISOString().slice(0, 10),
+      })
+    }
+    return options
+  }, [])
+
+  async function handleConfirmRent(e: React.FormEvent) {
+    e.preventDefault()
+    if (!rentingVehicle || !returnDate) return
 
     setLoading(true)
-    setMessage('Registrando solicitud de alquiler...')
+    setMessage('Registrando alquiler...')
     try {
-      await registerRental({
-        vehicleId: vehicle.id,
-        customerName: 'Cliente demo',
-        startDate: new Date().toISOString().slice(0, 10),
-        expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .slice(0, 10),
+      const updated = await updateVehicle(rentingVehicle.id, {
+        brand: rentingVehicle.brand,
+        model: rentingVehicle.model,
+        state: 'no_disponible',
+        dateReturn: new Date(returnDate).toISOString(),
       })
-
-      await updateVehicleState(vehicle.id, 'no_disponible')
-      setVehicles((previous) =>
-        previous.map((item) =>
-          item.id === vehicle.id ? { ...item, state: 'no_disponible' } : item,
-        ),
-      )
-      setMessage('Solicitud registrada y estado de vehículo actualizado.')
+      setVehicles((prev) => prev.map((v) => (v.id === updated.id ? updated : v)))
+      setMessage(`Vehículo alquilado exitosamente. Devolución: ${formatDate(returnDate)}`)
+      setRentingVehicle(null)
+      setReturnDate('')
     } catch (error) {
-      setMessage(`Error al solicitar el alquiler: ${(error as Error).message}`)
+      setMessage(`Error al alquilar: ${(error as Error).message}`)
     } finally {
       setLoading(false)
     }
   }
 
-  function handleDelete(id: number) {
-    setVehicles((previous) => previous.filter((vehicle) => vehicle.id !== id))
-    setMessage('Vehículo eliminado de la vista local.')
+  async function handleCancelRent(vehicle: Vehicle) {
+    setLoading(true)
+    setMessage('Cancelando alquiler...')
+    try {
+      const updated = await updateVehicle(vehicle.id, {
+        brand: vehicle.brand,
+        model: vehicle.model,
+        state: 'disponible',
+        dateReturn: null,
+      })
+      setVehicles((prev) => prev.map((v) => (v.id === updated.id ? updated : v)))
+      setMessage('Alquiler cancelado, vehículo disponible nuevamente.')
+    } catch (error) {
+      setMessage(`Error al cancelar: ${(error as Error).message}`)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className="dashboard-shell">
       <section className="dashboard-header">
         <div>
-          <p className="eyebrow">Panel principal de rentas</p>
-          <h2>Gestiona tu flota y realiza solicitudes</h2>
+          <h2>Gestiona tu alquiler</h2>
           <p className="dashboard-subtitle">
-            Puedes ver aquí los vehículos disponibles, editar su información y crear nuevas
-            secciones con facilidad.
+            Puedes ver aquí los vehículos disponibles, editar su información
           </p>
         </div>
-        <div className="dashboard-actions">
-          <button className="button" onClick={() => onNavigate('create')}>
-            Sección crear vehículo
-          </button>
-          <button className="button button-secondary" onClick={() => onNavigate('edit')}>
-            Sección editar vehículo
-          </button>
-        </div>
       </section>
+
+      {rentingVehicle && (
+        <form className="management-form" onSubmit={handleConfirmRent}>
+          <h3>Alquilar: {rentingVehicle.brand} {rentingVehicle.model}</h3>
+          <div className="form-grid">
+            <label>
+              Fecha de devolución
+              <select
+                value={returnDate}
+                onChange={(e) => setReturnDate(e.target.value)}
+                required
+              >
+                <option value="" disabled>Seleccione una fecha</option>
+                {dateOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="form-actions">
+            <button type="submit" className="button button-primary" disabled={loading}>
+              Confirmar alquiler
+            </button>
+            <button type="button" className="button button-secondary" onClick={() => setRentingVehicle(null)}>
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
 
       <section className="cards-row">
         <article className="card">
           <h3>Vehículos disponibles</h3>
           <p>
-            <strong>{availableCount}</strong> vehículos listos para alquilar y solicitar desde el
-            tablero.
-          </p>
-        </article>
-        <article className="card">
-          <h3>Estado general</h3>
-          <p>
-            Las operaciones actualizarán el estado de un vehículo tras el alquiler, cambiando el
-            registro a <strong>no disponible</strong>.
+            <strong>{availableCount}</strong> vehículos listos para alquilar.
           </p>
         </article>
       </section>
@@ -128,11 +170,7 @@ export default function VehicleDashboard({ onNavigate }: Props) {
         <div className="table-panel-header">
           <div>
             <h3>Tabla de vehículos</h3>
-            <p>Añade cabeceras, ajusta columnas y conecta con tu microservicio de vehículos.</p>
           </div>
-          <button className="button button-primary" onClick={loadVehicles} disabled={loading}>
-            Actualizar lista
-          </button>
         </div>
 
         <div className="table-container">
@@ -166,21 +204,18 @@ export default function VehicleDashboard({ onNavigate }: Props) {
                         {vehicle.state === 'disponible' ? 'Disponible' : 'No disponible'}
                       </span>
                     </td>
-                    <td>{new Date(vehicle.create_date).toLocaleDateString()}</td>
-                    <td>{vehicle.date_return ? new Date(vehicle.date_return).toLocaleDateString() : '—'}</td>
+                    <td>{formatDate(vehicle.createDate)}</td>
+                    <td>{formatDate(vehicle.dateReturn)}</td>
                     <td className="actions-cell">
-                      <button className="small-button" onClick={() => handleViewDetails(vehicle.id)}>
-                        Ver
-                      </button>
-                      <button className="small-button button-primary" onClick={() => handleRent(vehicle)}>
-                        Alquilar
-                      </button>
-                      <button className="small-button button-secondary" onClick={() => onNavigate('edit')}>
-                        Editar
-                      </button>
-                      <button className="small-button button-danger" onClick={() => handleDelete(vehicle.id)}>
-                        Eliminar
-                      </button>
+                      {vehicle.state === 'disponible' ? (
+                        <button className="small-button button-primary" onClick={() => handleShowRentForm(vehicle)}>
+                          Alquilar
+                        </button>
+                      ) : (
+                        <button className="small-button button-secondary" onClick={() => handleCancelRent(vehicle)}>
+                          Cancelar alquiler
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -188,49 +223,6 @@ export default function VehicleDashboard({ onNavigate }: Props) {
             </tbody>
           </table>
         </div>
-      </section>
-
-      {selectedVehicle ? (
-        <section className="detail-panel">
-          <h3>Detalle de vehículo</h3>
-          <div className="detail-grid">
-            <div>
-              <strong>ID</strong>
-              <p>{selectedVehicle.id}</p>
-            </div>
-            <div>
-              <strong>Marca</strong>
-              <p>{selectedVehicle.brand}</p>
-            </div>
-            <div>
-              <strong>Modelo</strong>
-              <p>{selectedVehicle.model}</p>
-            </div>
-            <div>
-              <strong>Estado</strong>
-              <p>{selectedVehicle.state}</p>
-            </div>
-            <div>
-              <strong>Creado</strong>
-              <p>{new Date(selectedVehicle.create_date).toLocaleString()}</p>
-            </div>
-            <div>
-              <strong>Fecha de retorno</strong>
-              <p>{selectedVehicle.date_return ?? 'No definida'}</p>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="placeholder-row">
-        <article className="placeholder-card">
-          <h3>Sección crear vehículo</h3>
-          <p>Este espacio está preparado para que agregues el formulario de creación de vehículos.</p>
-        </article>
-        <article className="placeholder-card">
-          <h3>Sección editar vehículo</h3>
-          <p>Selecciona un vehículo y luego trabaja en la lógica para editar sus datos.</p>
-        </article>
       </section>
 
       {message ? <div className="message-box">{message}</div> : null}

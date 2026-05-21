@@ -2,41 +2,51 @@
 import './App.css'
 import { useState } from 'react'
 import VehicleDashboard from './components/VehicleDashboard'
+import VehicleManagement from './components/VehicleManagement'
 import WelcomeScreen from './components/WelcomeScreen'
 
+type Page = 'welcome' | 'dashboard' | 'management' | 'create' | 'edit'
+
 function App() {
-  const [page, setPage] = useState<'welcome' | 'dashboard' | 'create' | 'edit'>('welcome')
+  const [page, setPage] = useState<Page>('welcome')
 
   function handleStart() {
     setPage('dashboard')
   }
 
+  function handleManage() {
+    setPage('management')
+  }
+
   return (
     <div className="app-shell">
       {page === 'welcome' ? (
-        <WelcomeScreen onStart={handleStart} />
+        <WelcomeScreen onStart={handleStart} onManage={handleManage} />
       ) : (
         <div className="main-screen">
           <header className="main-header">
             <div>
               <p className="eyebrow">Vehicle Rent</p>
-              <h1>Panel principal de alquiler de vehículos</h1>
+              <h1>
+                {page === 'management'
+                  ? 'Administración de vehículos'
+                  : 'Panel principal de alquiler de vehículos'}
+              </h1>
             </div>
             <div className="nav-buttons">
               <button className="button" onClick={() => setPage('dashboard')}>
-                Tabla principal
+                Panel de alquiler
               </button>
-              <button className="button button-secondary" onClick={() => setPage('create')}>
-                Crear vehículo
-              </button>
-              <button className="button button-secondary" onClick={() => setPage('edit')}>
-                Editar vehículo
+              <button className="button button-secondary" onClick={() => setPage('management')}>
+                Administrar vehículos
               </button>
             </div>
           </header>
 
           {page === 'dashboard' ? (
-            <VehicleDashboard onNavigate={setPage} />
+            <VehicleDashboard />
+          ) : page === 'management' ? (
+            <VehicleManagement />
           ) : page === 'create' ? (
             <section className="placeholder-view">
               <h2>Sección de crear vehículo</h2>

@@ -1,3 +1,9 @@
+
+input, select {
+  font-family: inherit;
+  color: black;
+}
+
 .app-shell {
   min-height: 100vh;
   display: flex;
@@ -14,7 +20,7 @@
 }
 
 .hero-panel {
-  max-width: 720px;
+  max-width: 1000px;
   width: 100%;
   padding: 48px;
   border-radius: 20px;
@@ -310,6 +316,54 @@
   border-radius: 18px;
   background: rgba(157, 129, 255, 0.14);
   color: #3f2f7a;
+}
+
+.management-form {
+  background: #f8f5ff;
+  border-radius: 22px;
+  padding: 24px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(114, 93, 218, 0.12);
+}
+
+.management-form h3 {
+  margin: 0 0 16px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 600;
+  color: #41316d;
+}
+
+.form-grid input,
+.form-grid select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #ded8f8;
+  font-size: 0.95rem;
+  background: white;
+}
+
+.form-grid input:focus,
+.form-grid select:focus {
+  outline: none;
+  border-color: #8a6cf3;
+  box-shadow: 0 0 0 3px rgba(138, 108, 243, 0.15);
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
 }
 
 @media (max-width: 900px) {

@@ -3,8 +3,8 @@ export type Vehicle = {
   brand: string
   model: string
   state: 'disponible' | 'no_disponible'
-  create_date: string
-  date_return?: string | null
+  createDate: string
+  dateReturn?: string | null
 }
 
 export type RentalRequest = {
