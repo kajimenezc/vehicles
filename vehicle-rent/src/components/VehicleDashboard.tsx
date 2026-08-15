@@ -22,11 +22,6 @@ export default function VehicleDashboard() {
   const [rentingVehicle, setRentingVehicle] = useState<Vehicle | null>(null)
   const [returnDate, setReturnDate] = useState('')
 
-  const availableCount = useMemo(
-    () => vehicles.filter((vehicle) => vehicle.state === 'disponible').length,
-    [vehicles],
-  )
-
   useEffect(() => {
     loadVehicles()
   }, [])
@@ -43,16 +38,6 @@ export default function VehicleDashboard() {
     } finally {
       setLoading(false)
     }
-  }
-
-  function handleShowRentForm(vehicle: Vehicle) {
-    if (vehicle.state !== 'disponible') {
-      setMessage('El vehículo ya no está disponible.')
-      return
-    }
-    setRentingVehicle(vehicle)
-    setReturnDate('')
-    setMessage('')
   }
 
   const dateOptions = useMemo(() => {
@@ -157,15 +142,6 @@ export default function VehicleDashboard() {
         </form>
       )}
 
-      <section className="cards-row">
-        <article className="card">
-          <h3>Vehículos disponibles</h3>
-          <p>
-            <strong>{availableCount}</strong> vehículos listos para alquilar.
-          </p>
-        </article>
-      </section>
-
       <section className="table-panel">
         <div className="table-panel-header">
           <div>
@@ -207,15 +183,11 @@ export default function VehicleDashboard() {
                     <td>{formatDate(vehicle.createDate)}</td>
                     <td>{formatDate(vehicle.dateReturn)}</td>
                     <td className="actions-cell">
-                      {vehicle.state === 'disponible' ? (
-                        <button className="small-button button-primary" onClick={() => handleShowRentForm(vehicle)}>
-                          Alquilar
-                        </button>
-                      ) : (
+                      
                         <button className="small-button button-secondary" onClick={() => handleCancelRent(vehicle)}>
                           Cancelar alquiler
                         </button>
-                      )}
+                      
                     </td>
                   </tr>
                 ))

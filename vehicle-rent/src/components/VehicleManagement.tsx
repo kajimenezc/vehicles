@@ -2,22 +2,18 @@ import { useEffect, useState } from 'react'
 import type { Vehicle } from '../types'
 import { createVehicle, deleteVehicle, getVehicles, updateVehicle } from '../services/api'
 
-type FormData = {
-  brand: string
-  model: string
-  state: 'disponible' | 'no_disponible'
-  dateReturn: string
-}
-
-const emptyForm: FormData = { brand: '', model: '', state: 'disponible', dateReturn: '' }
-
 export default function VehicleManagement() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
-  const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [form, setForm] = useState<FormData>(emptyForm)
+  const [showCreate, setShowCreate] = useState(false)
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null)
+  const [createBrand, setCreateBrand] = useState('')
+  const [createModel, setCreateModel] = useState('')
+  const [createState, setCreateState] = useState<'disponible' | 'no_disponible'>('disponible')
+  const [editBrand, setEditBrand] = useState('')
+  const [editModel, setEditModel] = useState('')
+  const [editState, setEditState] = useState<'disponible' | 'no_disponible'>('disponible')
 
   useEffect(() => { loadVehicles() }, [])
 
@@ -35,48 +31,61 @@ export default function VehicleManagement() {
     }
   }
 
-  function resetForm() {
-    setForm(emptyForm)
-    setShowForm(false)
-    setEditingId(null)
-  }
-
-  function handleEdit(vehicle: Vehicle) {
-    setForm({
-      brand: vehicle.brand,
-      model: vehicle.model,
-      state: vehicle.state,
-      dateReturn: vehicle.dateReturn ?? '',
-    })
-    setEditingId(vehicle.id)
-    setShowForm(true)
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.brand.trim() || !form.model.trim()) {
+    if (!createBrand.trim() || !createModel.trim()) {
       setMessage('Marca y modelo son obligatorios.')
       return
     }
     setLoading(true)
     try {
-      const payload = {
-        brand: form.brand.trim(),
-        model: form.model.trim(),
-        state: form.state
-      }
-      if (editingId) {
-        const updated = await updateVehicle(editingId, payload)
-        setVehicles((prev) => prev.map((v) => (v.id === editingId ? updated : v)))
-        setMessage('Vehículo actualizado correctamente.')
-      } else {
-        const created = await createVehicle(payload)
-        setVehicles((prev) => [...prev, created])
-        setMessage('Vehículo creado correctamente.')
-      }
-      resetForm()
+      const created = await createVehicle({
+        brand: createBrand.trim(),
+        model: createModel.trim(),
+        state: createState,
+        dateReturn: null,
+      })
+      setVehicles((prev) => [...prev, created])
+      setMessage('Vehículo creado correctamente.')
+      setShowCreate(false)
+      setCreateBrand('')
+      setCreateModel('')
+      setCreateState('disponible')
     } catch (error) {
-      setMessage(`Error: ${(error as Error).message}`)
+      setMessage(`Error al crear: ${(error as Error).message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function handleEditClick(vehicle: Vehicle) {
+    setEditingVehicle(vehicle)
+    setEditBrand(vehicle.brand)
+    setEditModel(vehicle.model)
+    setEditState(vehicle.state)
+    setMessage('')
+  }
+
+  async function handleSaveEdit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editingVehicle) return
+    if (!editBrand.trim() || !editModel.trim()) {
+      setMessage('Marca y modelo son obligatorios.')
+      return
+    }
+    setLoading(true)
+    try {
+      const updated = await updateVehicle(editingVehicle.id, {
+        brand: editBrand.trim(),
+        model: editModel.trim(),
+        state: editState,
+        dateReturn: null,
+      })
+      setVehicles((prev) => prev.map((v) => (v.id === updated.id ? updated : v)))
+      setMessage('Vehículo actualizado correctamente.')
+      setEditingVehicle(null)
+    } catch (error) {
+      setMessage(`Error al actualizar: ${(error as Error).message}`)
     } finally {
       setLoading(false)
     }
@@ -100,63 +109,47 @@ export default function VehicleManagement() {
     <div className="dashboard-shell">
       <div className="dashboard-header">
         <div>
-          <p className="eyebrow">Administración</p>
           <h2>Gestión de vehículos</h2>
         </div>
         <div className="dashboard-actions">
-          <button
-            className="button button-primary"
-            onClick={() => { resetForm(); setShowForm(true) }}
-            disabled={loading}
-          >
+          <button className="button button-primary" onClick={() => { setShowCreate(true); setEditingVehicle(null) }} disabled={loading}>
             Crear vehículo
           </button>
         </div>
       </div>
 
-      {showForm && (
-        <form className="management-form" onSubmit={handleSubmit}>
-          <h3>{editingId ? 'Editar vehículo' : 'Crear vehículo'}</h3>
+      {showCreate && (
+        <form className="management-form" onSubmit={handleCreate}>
+          <h3>Crear vehículo</h3>
           <div className="form-grid">
-            <label>
-              Marca
-              <input
-                type="text"
-                value={form.brand}
-                onChange={(e) => setForm({ ...form, brand: e.target.value })}
-                required
-                maxLength={50}
-              />
-            </label>
-            <label>
-              Modelo
-              <input
-                type="text"
-                value={form.model}
-                onChange={(e) => setForm({ ...form, model: e.target.value })}
-                required
-                maxLength={50}
-              />
-            </label>
-            <label>
-              Estado
-              <select
-                value={form.state}
-                onChange={(e) => setForm({ ...form, state: e.target.value as 'disponible' | 'no_disponible' })}
-              >
-                <option value="disponible">Disponible</option>
-                <option value="no_disponible">No disponible</option>
-              </select>
-            </label>
-          
+            <label>Marca<input type="text" value={createBrand} onChange={(e) => setCreateBrand(e.target.value)} required maxLength={50} /></label>
+            <label>Modelo<input type="text" value={createModel} onChange={(e) => setCreateModel(e.target.value)} required maxLength={50} /></label>
+            <label>Estado<select value={createState} onChange={(e) => setCreateState(e.target.value as 'disponible' | 'no_disponible')}>
+              <option value="disponible">Disponible</option>
+              <option value="no_disponible">No disponible</option>
+            </select></label>
           </div>
           <div className="form-actions">
-            <button type="submit" className="button button-primary" disabled={loading}>
-              {editingId ? 'Guardar cambios' : 'Crear'}
-            </button>
-            <button type="button" className="button button-secondary" onClick={resetForm}>
-              Cancelar
-            </button>
+            <button type="submit" className="button button-primary" disabled={loading}>Crear</button>
+            <button type="button" className="button button-secondary" onClick={() => setShowCreate(false)}>Cancelar</button>
+          </div>
+        </form>
+      )}
+
+      {editingVehicle && (
+        <form className="management-form" onSubmit={handleSaveEdit}>
+          <h3>Editar vehículo</h3>
+          <div className="form-grid">
+            <label>Marca<input type="text" value={editBrand} onChange={(e) => setEditBrand(e.target.value)} required maxLength={50} /></label>
+            <label>Modelo<input type="text" value={editModel} onChange={(e) => setEditModel(e.target.value)} required maxLength={50} /></label>
+            <label>Estado<select value={editState} onChange={(e) => setEditState(e.target.value as 'disponible' | 'no_disponible')}>
+              <option value="disponible">Disponible</option>
+              <option value="no_disponible">No disponible</option>
+            </select></label>
+          </div>
+          <div className="form-actions">
+            <button type="submit" className="button button-primary" disabled={loading}>Guardar</button>
+            <button type="button" className="button button-secondary" onClick={() => setEditingVehicle(null)}>Cancelar</button>
           </div>
         </form>
       )}
@@ -176,7 +169,7 @@ export default function VehicleManagement() {
           <tbody>
             {vehicles.length === 0 ? (
               <tr>
-                <td colSpan={7} className="empty-row">
+                <td colSpan={6} className="empty-row">
                   {loading ? 'Cargando...' : 'No hay vehículos registrados.'}
                 </td>
               </tr>
@@ -186,19 +179,11 @@ export default function VehicleManagement() {
                   <td>{vehicle.id}</td>
                   <td>{vehicle.brand}</td>
                   <td>{vehicle.model}</td>
-                  <td>
-                    <span className={`status-pill ${vehicle.state}`}>
-                      {vehicle.state === 'disponible' ? 'Disponible' : 'No disponible'}
-                    </span>
-                  </td>
+                  <td><span className={`status-pill ${vehicle.state}`}>{vehicle.state === 'disponible' ? 'Disponible' : 'No disponible'}</span></td>
                   <td>{new Date(vehicle.createDate).toLocaleDateString()}</td>
                   <td className="actions-cell">
-                    <button className="small-button button-secondary" onClick={() => handleEdit(vehicle)}>
-                      Editar
-                    </button>
-                    <button className="small-button button-danger" onClick={() => handleDelete(vehicle.id)}>
-                      Eliminar
-                    </button>
+                    <button className="small-button button-secondary" onClick={() => handleEditClick(vehicle)}>Editar</button>
+                    <button className="small-button button-danger" onClick={() => handleDelete(vehicle.id)}>Eliminar</button>
                   </td>
                 </tr>
               ))

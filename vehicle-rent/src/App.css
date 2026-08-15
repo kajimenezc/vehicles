@@ -316,6 +316,21 @@ input, select {
   border-radius: 18px;
   background: rgba(157, 129, 255, 0.14);
   color: #3f2f7a;
+  cursor: pointer;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #16a34a;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin: 24px auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .management-form {
